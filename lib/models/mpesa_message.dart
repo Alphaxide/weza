@@ -1,177 +1,138 @@
-// TODO Implement this library.
-
-// lib/models/mpesa_message.dart
-import 'package:hive/hive.dart';
-
-
-@HiveType(typeId: 0)
-class MpesaMessage extends HiveObject {
-  @HiveField(0)
-  final String id;
-
-  @HiveField(1)
-  final String messageBody;
-
-  @HiveField(2)
-  final DateTime timestamp;
-
-  @HiveField(3)
-  final String sender;
-
-  @HiveField(4)
-  final MessageCategory category;
-
-  @HiveField(5)
-  final double? amount;
-
-  @HiveField(6)
-  final String? transactionCode;
-
-  @HiveField(7)
-  final String? recipientName;
-
-  @HiveField(8)
-  final String? accountNumber;
+class MpesaMessage {
+  final int? id; // nullable for new messages
+  final String transactionCode;
+  final String transactionType;
+  final String senderOrReceiverName;
+  final String phoneNumber;
+  final double amount;
+  final double balance;
+  final String account;
+  final String message;
+  final DateTime transactionDate;
+  final String category;
+  final String direction;
+  final double transactionCost;
+  final String agentDetails;
+  final bool isReversal;
+  final double fulizaAmount;
+  final bool usedFuliza;
+  final bool isLoan;
+  final String loanType;
 
   MpesaMessage({
-    required this.id,
-    required this.messageBody,
-    required this.timestamp,
-    required this.sender,
+    this.id,
+    required this.transactionCode,
+    required this.transactionType,
+    required this.senderOrReceiverName,
+    required this.phoneNumber,
+    required this.amount,
+    required this.balance,
+    required this.account,
+    required this.message,
+    required this.transactionDate,
     required this.category,
-    this.amount,
-    this.transactionCode,
-    this.recipientName,
-    this.accountNumber,
+    required this.direction,
+    this.transactionCost = 0.0,
+    this.agentDetails = '',
+    this.isReversal = false,
+    this.fulizaAmount = 0.0,
+    this.usedFuliza = false,
+    this.isLoan = false,
+    this.loanType = '',
   });
 
-  factory MpesaMessage.fromSMS(String body, String sender, DateTime timestamp) {
-    // Generate a unique ID
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-    
-    // Initial category before classification
-    final category = MessageCategory.unclassified;
-    
-    // Extract transaction details
-    final amountRegExp = RegExp(r'Ksh[.|\s]?([0-9,.]+)');
-    final transactionCodeRegExp = RegExp(r'([A-Z0-9]{10})');
-    final recipientNameRegExp = RegExp(r'to\s+([A-Za-z\s]+)');
-    final accountNumberRegExp = RegExp(r'account\s+([A-Za-z0-9]+)');
-    
-    // Extract amount
-    final amountMatch = amountRegExp.firstMatch(body);
-    double? amount;
-    if (amountMatch != null) {
-      final amountStr = amountMatch.group(1)?.replaceAll(',', '');
-      amount = double.tryParse(amountStr ?? '');
-    }
-    
-    // Extract transaction code
-    final transactionCodeMatch = transactionCodeRegExp.firstMatch(body);
-    final transactionCode = transactionCodeMatch?.group(1);
-    
-    // Extract recipient name
-    final recipientNameMatch = recipientNameRegExp.firstMatch(body);
-    final recipientName = recipientNameMatch?.group(1);
-    
-    // Extract account number
-    final accountNumberMatch = accountNumberRegExp.firstMatch(body);
-    final accountNumber = accountNumberMatch?.group(1);
-
-    return MpesaMessage(
-      id: id,
-      messageBody: body,
-      timestamp: timestamp,
-      sender: sender,
-      category: category,
-      amount: amount,
-      transactionCode: transactionCode,
-      recipientName: recipientName,
-      accountNumber: accountNumber,
-    );
-  }
-}
-
-@HiveType(typeId: 1)
-enum MessageCategory {
-  @HiveField(0)
-  sendMoney,
-  
-  @HiveField(1)
-  receiveMoney,
-  
-  @HiveField(2)
-  buyGoods,
-  
-  @HiveField(3)
-  payBill,
-  
-  @HiveField(4)
-  withdrawCash,
-  
-  @HiveField(5)
-  depositCash,
-  
-  @HiveField(6)
-  balanceInquiry,
-  
-  @HiveField(7)
-  airtime,
-  
-  @HiveField(8)
-  loan,
-  
-  @HiveField(9)
-  subscription,
-  
-  @HiveField(10)
-  unclassified
-}
-class MpesaMessageAdapter extends TypeAdapter<MpesaMessage> {
-  @override
-  final int typeId = 0;
-
-  @override
-  MpesaMessage read(BinaryReader reader) {
-    final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{
-      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+  // Convert MpesaMessage to Map for database storage
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'transactionCode': transactionCode,
+      'transactionType': transactionType,
+      'senderOrReceiverName': senderOrReceiverName,
+      'phoneNumber': phoneNumber,
+      'amount': amount,
+      'balance': balance,
+      'account': account,
+      'message': message,
+      'transactionDate': transactionDate.millisecondsSinceEpoch,
+      'category': category,
+      'direction': direction,
+      'transactionCost': transactionCost,
+      'agentDetails': agentDetails,
+      'isReversal': isReversal ? 1 : 0, // SQLite doesn't have boolean type
+      'fulizaAmount': fulizaAmount,
+      'usedFuliza': usedFuliza ? 1 : 0,
+      'isLoan': isLoan ? 1 : 0,
+      'loanType': loanType,
     };
-    
+  }
+
+  // Create MpesaMessage from Map (from database)
+  factory MpesaMessage.fromMap(Map<String, dynamic> map) {
     return MpesaMessage(
-      id: fields[0] as String,
-      messageBody: fields[1] as String,
-      timestamp: fields[2] as DateTime,
-      sender: fields[3] as String,
-      category: fields[4] as MessageCategory,
-      amount: fields[5] as double?,
-      transactionCode: fields[6] as String?,
-      recipientName: fields[7] as String?,
-      accountNumber: fields[8] as String?,
+      id: map['id'],
+      transactionCode: map['transactionCode'],
+      transactionType: map['transactionType'],
+      senderOrReceiverName: map['senderOrReceiverName'],
+      phoneNumber: map['phoneNumber'],
+      amount: map['amount'],
+      balance: map['balance'],
+      account: map['account'],
+      message: map['message'],
+      transactionDate: DateTime.fromMillisecondsSinceEpoch(map['transactionDate']),
+      category: map['category'],
+      direction: map['direction'],
+      transactionCost: map['transactionCost'] ?? 0.0,
+      agentDetails: map['agentDetails'] ?? '',
+      isReversal: map['isReversal'] == 1,
+      fulizaAmount: map['fulizaAmount'] ?? 0.0,
+      usedFuliza: map['usedFuliza'] == 1,
+      isLoan: map['isLoan'] == 1,
+      loanType: map['loanType'] ?? '',
     );
   }
 
-  @override
-  void write(BinaryWriter writer, MpesaMessage obj) {
-    writer
-      ..writeByte(9)
-      ..writeByte(0)
-      ..write(obj.id);
-      // ... write the rest of the fields ...
-  }
-}
-
-class MessageCategoryAdapter extends TypeAdapter<MessageCategory> {
-  @override
-  final int typeId = 1;
-
-  @override
-  MessageCategory read(BinaryReader reader) {
-    return MessageCategory.values[reader.readByte()];
-  }
-
-  @override
-  void write(BinaryWriter writer, MessageCategory obj) {
-    writer.writeByte(obj.index);
+  // Copy with method for updates
+  MpesaMessage copyWith({
+    int? id,
+    String? transactionCode,
+    String? transactionType,
+    String? senderOrReceiverName,
+    String? phoneNumber,
+    double? amount,
+    double? balance,
+    String? account,
+    String? message,
+    DateTime? transactionDate,
+    String? category,
+    String? direction,
+    double? transactionCost,
+    String? agentDetails,
+    bool? isReversal,
+    double? fulizaAmount,
+    bool? usedFuliza,
+    bool? isLoan,
+    String? loanType,
+  }) {
+    return MpesaMessage(
+      id: id ?? this.id,
+      transactionCode: transactionCode ?? this.transactionCode,
+      transactionType: transactionType ?? this.transactionType,
+      senderOrReceiverName: senderOrReceiverName ?? this.senderOrReceiverName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      amount: amount ?? this.amount,
+      balance: balance ?? this.balance,
+      account: account ?? this.account,
+      message: message ?? this.message,
+      transactionDate: transactionDate ?? this.transactionDate,
+      category: category ?? this.category,
+      direction: direction ?? this.direction,
+      transactionCost: transactionCost ?? this.transactionCost,
+      agentDetails: agentDetails ?? this.agentDetails,
+      isReversal: isReversal ?? this.isReversal,
+      fulizaAmount: fulizaAmount ?? this.fulizaAmount,
+      usedFuliza: usedFuliza ?? this.usedFuliza,
+      isLoan: isLoan ?? this.isLoan,
+      loanType: loanType ?? this.loanType,
+    );
   }
 }
