@@ -1,6 +1,12 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:weza/storage/mpesa_storage.dart';
+import 'package:weza/storage/hive_storage.dart';
+import 'package:weza/storage/sqlite_storage.dart';
 
-// This is a stub that will be implemented differently for web and mobile
 MessageStorage getStorageImplementation() {
-  throw UnimplementedError('No storage implementation available');
+  if (kIsWeb) {
+    return HiveStorage();
+  } else {
+    return SqliteStorage();
+  }
 }
