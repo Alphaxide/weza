@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/budget.dart';
-import '../services/budget_service.dart';
+import '../service/budget_service.dart';
 import '../utils/category_helper.dart';
 
 class AddBudgetCategoryScreen extends StatefulWidget {
